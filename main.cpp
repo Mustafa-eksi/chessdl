@@ -9,6 +9,7 @@
 #define WHITE_PAWNC (Uint8) 200, (Uint8) 200, (Uint8) 200, SDL_ALPHA_OPAQUE
 #define BLACK_PAWNC (Uint8) 24, (Uint8) 24, (Uint8) 24, SDL_ALPHA_OPAQUE
 #define TABLE_SELECTEDCOLOR (Uint8) 183, (Uint8) 53, (Uint8) 35, SDL_ALPHA_OPAQUE
+#define TABLE_LEGALMOVECOLOR (Uint8) 150, (Uint8) 45, (Uint8) 30, SDL_ALPHA_OPAQUE
 
 using namespace std;
 
@@ -24,6 +25,10 @@ typedef enum Type {
 typedef enum PlayerColors {
   PBLACK, PWHITE
 } PlayerColors;
+
+typedef struct SquarePos {
+  int x, y;
+} SquarePos;
 
 typedef struct PieceLoc {
   int i;
@@ -56,6 +61,7 @@ class Game {
   PlayerColors turn;
   public:
     PieceLoc Selected;
+    vector<SquarePos> LegalMoves;
     vector<Piece> StartingPosition(PlayerColors color) {
       vector<Piece> res;
       for(int i = 0; i < 8; i++) {
@@ -86,7 +92,7 @@ class Game {
       MoveCount = 0;
       WhitePieces = StartingPosition(PWHITE);
       BlackPieces = StartingPosition(PBLACK);
-      Selected = (PieceLoc) {-1, PWHITE};
+      Selected = PieceLoc {-1, PWHITE};
     }
     vector<Piece> GetPieces(PlayerColors color) {
       if(color == PWHITE) {
@@ -128,9 +134,83 @@ class Game {
       res.i = -1;
       return res;
     }
+    bool IsLegal(PieceLoc p, SquarePos x) { // TODO: There's more to implement...
+      Type pt = p.color == PWHITE ? WhitePieces[p.i].GetType() : BlackPieces[p.i].GetType();
+      Piece pc = p.color == PWHITE ? WhitePieces[p.i] : BlackPieces[p.i];
+      switch(pt) {
+        case Pawn: {
+          if(p.color == PWHITE) {
+            if(pc.GetY() == 1) {
+              return 
+            }else if(pc.GetY() < 8){
+              result.push_back(SquarePos {pc.GetX(), pc.GetY()+1});
+            }
+          }else {
+            if(pc.GetY() == 6) {
+              result.push_back(SquarePos {pc.GetX(), 5});
+              result.push_back(SquarePos {pc.GetX(), 4});
+            }else if(pc.GetY() > 0){
+              result.push_back(SquarePos {pc.GetX(), pc.GetY()-1});
+            }
+          }
+          break;
+        }
+        default: {
+          return result;
+          break;
+        }
+      }
+      return false;
+    }
+    vector<SquarePos> GetLegalMoves(PieceLoc p) {
+      vector<SquarePos> result;
+      Type pt = p.color == PWHITE ? WhitePieces[p.i].GetType() : BlackPieces[p.i].GetType();
+      Piece pc = p.color == PWHITE ? WhitePieces[p.i] : BlackPieces[p.i];
+      switch(pt) {
+        case Pawn: {
+          if(p.color == PWHITE) {
+            if(pc.GetY() == 1) {
+              result.push_back(SquarePos {pc.GetX(), 2});
+              result.push_back(SquarePos {pc.GetX(), 3});
+            }else if(pc.GetY() < 8){
+              result.push_back(SquarePos {pc.GetX(), pc.GetY()+1});
+            }
+          }else {
+            if(pc.GetY() == 6) {
+              result.push_back(SquarePos {pc.GetX(), 5});
+              result.push_back(SquarePos {pc.GetX(), 4});
+            }else if(pc.GetY() > 0){
+              result.push_back(SquarePos {pc.GetX(), pc.GetY()-1});
+            }
+          }
+          break;
+        }
+        default: {
+          return result;
+          break;
+        }
+      }
+      return result;
+    }
+    bool MovePiece(PieceLoc from, SquarePos to) { // Returns false if moving is unsuccessful
+      if(this->GetPieceLocInSquare(to.x, to.y).i != -1) return false;
+      if(to.x > 8 || to.x < 0 || to.y > 8 || to.y < 0) return false;
+      if(from.color == PWHITE) {
+        Piece ToPiece(to.x, to.y, WhitePieces[from.i].GetType());
+        WhitePieces[from.i] = ToPiece;
+      }else {
+        Piece ToPiece(to.x, to.y, BlackPieces[from.i].GetType());
+        BlackPieces[from.i] = ToPiece;
+      }
+      return true;
+    }
 };
 
 const int WINDOW_WIDTH = 1000, WINDOW_HEIGHT = 800, SQUARE_SIZE = 100, PIECE_SIZE = 90;
+
+SquarePos MousePosToSquarePos(int x, int y) {
+  return SquarePos {(int) floor(x/SQUARE_SIZE), (int) floor(y/SQUARE_SIZE)};
+}
 
 Piece FindPiece(int x, int y, Game game) {
   // FIXME: Satranç tahtası yer değiştirince bozulacak.
@@ -247,6 +327,14 @@ void RenderPieces(SDL_Renderer* renderer, Game game) {
       const SDL_Rect rect = sdlrect {x*SQUARE_SIZE, y*SQUARE_SIZE, SQUARE_SIZE, SQUARE_SIZE};
       SDL_RenderFillRect(renderer, &rect);
   }
+  if(game.LegalMoves.size() != 0) {
+      for(size_t i = 0; i < game.LegalMoves.size(); i++) {
+        SDL_SetRenderDrawColor(renderer, TABLE_LEGALMOVECOLOR);
+        using sdlrect = SDL_Rect;
+        const SDL_Rect rect = sdlrect {game.LegalMoves[i].x*SQUARE_SIZE, game.LegalMoves[i].y*SQUARE_SIZE, SQUARE_SIZE, SQUARE_SIZE};
+        SDL_RenderFillRect(renderer, &rect);
+      }
+  }
   vector<Piece> whitep = game.GetPieces(PWHITE);
   for(size_t i = 0; i < whitep.size(); i++) {
     /* SDL_SetRenderDrawColor(renderer, WHITE_PAWNC); */
@@ -282,7 +370,17 @@ int main(int argc, char** argv) {
         break;
       }
       case SDL_MOUSEBUTTONDOWN: {
-        game->Selected = FindPieceLoc(event.button.x, event.button.y, *game);
+        PieceLoc l = FindPieceLoc(event.button.x, event.button.y, *game);
+        SquarePos sp = MousePosToSquarePos(event.button.x, event.button.y);
+        if(game->Selected.i != -1) {
+          if(l.i == -1) {
+            if(!(game->MovePiece(game->Selected, SquarePos {sp.x, sp.y}))){
+              printf("ERROR: Couldn't move piece: x = %d, y = %d\n", sp.x, sp.y);
+            }
+          }
+        }
+        game->Selected = l;
+        game->LegalMoves = game->GetLegalMoves(game->Selected);
         break;
       }
     }

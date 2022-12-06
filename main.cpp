@@ -115,8 +115,12 @@ class Game {
       Piece empty(-1,-1,King);
       return empty;
     }
+    
     PieceLoc GetPieceLocInSquare(int x, int y) {
       PieceLoc res;
+      if(x < 0 || x > 8 || y < 0 || y > 8) {
+        goto retnull;
+      }
       for(size_t i = 0; i < WhitePieces.size(); i++) {
         if(WhitePieces[i].GetX() == x && WhitePieces[i].GetY() == y) {
           res.color = PWHITE;
@@ -131,56 +135,82 @@ class Game {
           return res;
         }
       }
+retnull:
       res.i = -1;
       return res;
     }
-    bool IsLegal(PieceLoc p, SquarePos x) { // TODO: There's more to implement...
-      Type pt = p.color == PWHITE ? WhitePieces[p.i].GetType() : BlackPieces[p.i].GetType();
-      Piece pc = p.color == PWHITE ? WhitePieces[p.i] : BlackPieces[p.i];
-      switch(pt) {
-        case Pawn: {
-          if(p.color == PWHITE) {
-            if(pc.GetY() == 1) {
-              return 
-            }else if(pc.GetY() < 8){
-              result.push_back(SquarePos {pc.GetX(), pc.GetY()+1});
-            }
-          }else {
-            if(pc.GetY() == 6) {
-              result.push_back(SquarePos {pc.GetX(), 5});
-              result.push_back(SquarePos {pc.GetX(), 4});
-            }else if(pc.GetY() > 0){
-              result.push_back(SquarePos {pc.GetX(), pc.GetY()-1});
-            }
-          }
-          break;
-        }
-        default: {
-          return result;
-          break;
+    // bool IsLegal(PieceLoc p, SquarePos x) { // TODO: There's more to implement...
+    //   Type pt = p.color == PWHITE ? WhitePieces[p.i].GetType() : BlackPieces[p.i].GetType();
+    //   Piece pc = p.color == PWHITE ? WhitePieces[p.i] : BlackPieces[p.i];
+    //   switch(pt) {
+    //     case Pawn: {
+    //       if(p.color == PWHITE) {
+    //         if(pc.GetY() == 1 && ((x.x == pc.GetX() && x.y == 2) || (x.x == pc.GetX() && x.y == 3))) {
+    //           return true;
+    //         }else if(pc.GetY() < 8){
+    //           return x.x == pc.GetX() && x.y == pc.GetY()+1;
+    //         }
+    //       }else {
+    //         if(pc.GetY() == 6 && ((x.x == pc.GetX() && x.y == 5) || (x.x == pc.GetX() && x.y == 4))) {
+    //           return true;
+    //         }else if(pc.GetY() > 0){
+    //           return x.x == pc.GetX() && x.y == pc.GetY()-1;
+    //         }
+    //       }
+    //       break;
+    //     }
+    //     default: {
+    //       break;
+    //     }
+    //   }
+    //   return false;
+    // }
+    bool IsLegal(PieceLoc p, SquarePos x) {
+      vector<SquarePos> pos = GetLegalMoves(p);
+      for(size_t i = 0; i < pos.size(); i++) {
+        if(pos[i].x == x.x && pos[i].y == x.y) {
+          return true;
         }
       }
       return false;
     }
     vector<SquarePos> GetLegalMoves(PieceLoc p) {
       vector<SquarePos> result;
+      if(p.color != this->turn) return result;
       Type pt = p.color == PWHITE ? WhitePieces[p.i].GetType() : BlackPieces[p.i].GetType();
       Piece pc = p.color == PWHITE ? WhitePieces[p.i] : BlackPieces[p.i];
       switch(pt) {
         case Pawn: {
           if(p.color == PWHITE) {
             if(pc.GetY() == 1) {
-              result.push_back(SquarePos {pc.GetX(), 2});
               result.push_back(SquarePos {pc.GetX(), 3});
-            }else if(pc.GetY() < 8){
-              result.push_back(SquarePos {pc.GetX(), pc.GetY()+1});
             }
-          }else {
+            if(this->GetPieceLocInSquare(pc.GetX()-1, pc.GetY()+1).i != -1) {
+              result.push_back(SquarePos {pc.GetX()-1, pc.GetY()+1});
+            }
+            if(this->GetPieceLocInSquare(pc.GetX()+1, pc.GetY()+1).i != -1){
+              result.push_back(SquarePos {pc.GetX()+1, pc.GetY()+1});
+            }
+            result.push_back(SquarePos {pc.GetX(), pc.GetY()+1});
+          } else {
             if(pc.GetY() == 6) {
-              result.push_back(SquarePos {pc.GetX(), 5});
               result.push_back(SquarePos {pc.GetX(), 4});
-            }else if(pc.GetY() > 0){
-              result.push_back(SquarePos {pc.GetX(), pc.GetY()-1});
+            }
+            if(this->GetPieceLocInSquare(pc.GetX()-1, pc.GetY()-1).i != -1) {
+              result.push_back(SquarePos {pc.GetX()-1, pc.GetY()-1});
+            }
+            if(this->GetPieceLocInSquare(pc.GetX()+1, pc.GetY()-1).i != -1){ 
+              result.push_back(SquarePos {pc.GetX()+1, pc.GetY()-1}); 
+            }
+            result.push_back(SquarePos {pc.GetX(), pc.GetY()-1});
+          }
+          break;
+        }
+        case Rook: {
+          for(int ix = 0; ix < 8; ix++) {
+            if(pc.GetX() != ix) {
+              if(this->GetPieceLocInSquare(ix, pc.GetY()).i != -1) {
+              }
             }
           }
           break;
@@ -190,11 +220,25 @@ class Game {
           break;
         }
       }
+      /* for(size_t i = 0; i < result.size(); i++) {
+        if(this->GetPieceLocInSquare(result[i].x, result[i].y).i != -1) {
+          result.erase(result.begin() + i);
+        }
+      } */
       return result;
     }
     bool MovePiece(PieceLoc from, SquarePos to) { // Returns false if moving is unsuccessful
-      if(this->GetPieceLocInSquare(to.x, to.y).i != -1) return false;
+      if(this->turn != from.color) return false;
       if(to.x > 8 || to.x < 0 || to.y > 8 || to.y < 0) return false;
+      if(!IsLegal(from, to)) return false;
+      PieceLoc pl = this->GetPieceLocInSquare(to.x, to.y);
+      if(pl.i != -1){
+        if(pl.color == PWHITE) {
+          WhitePieces.erase(WhitePieces.begin() + pl.i);
+        }else {
+          BlackPieces.erase(BlackPieces.begin() + pl.i);
+        }
+      }
       if(from.color == PWHITE) {
         Piece ToPiece(to.x, to.y, WhitePieces[from.i].GetType());
         WhitePieces[from.i] = ToPiece;
@@ -202,6 +246,7 @@ class Game {
         Piece ToPiece(to.x, to.y, BlackPieces[from.i].GetType());
         BlackPieces[from.i] = ToPiece;
       }
+      this->turn = this->turn == PWHITE ? PBLACK : PWHITE;
       return true;
     }
 };
@@ -216,7 +261,6 @@ Piece FindPiece(int x, int y, Game game) {
   // FIXME: Satranç tahtası yer değiştirince bozulacak.
   return game.GetPieceInSquare((int) floor(x/SQUARE_SIZE), (int) floor(y/SQUARE_SIZE));
 }
-
 
 PieceLoc FindPieceLoc(int x, int y, Game game) {
   // FIXME: Satranç tahtası yer değiştirince bozulacak.
@@ -373,10 +417,8 @@ int main(int argc, char** argv) {
         PieceLoc l = FindPieceLoc(event.button.x, event.button.y, *game);
         SquarePos sp = MousePosToSquarePos(event.button.x, event.button.y);
         if(game->Selected.i != -1) {
-          if(l.i == -1) {
-            if(!(game->MovePiece(game->Selected, SquarePos {sp.x, sp.y}))){
-              printf("ERROR: Couldn't move piece: x = %d, y = %d\n", sp.x, sp.y);
-            }
+          if(!(game->MovePiece(game->Selected, SquarePos {sp.x, sp.y}))){
+            printf("ERROR: Couldn't move piece: x = %d, y = %d\n", sp.x, sp.y);
           }
         }
         game->Selected = l;

@@ -1,6 +1,10 @@
 {
     "files.associations": {
         "vector": "cpp",
-        "cmath": "cpp"
+        "cmath": "cpp",
+        "initializer_list": "cpp",
+        "type_traits": "cpp",
+        "xstring": "cpp",
+        "xutility": "cpp"
     }
 }

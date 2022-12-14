@@ -1,6 +1,6 @@
 #include <iostream>
 #include <SDL2/SDL.h>
-#include <SDL_Image.h>
+#include <SDL2/SDL_image.h>
 #include <vector>
 #include <math.h>
 
@@ -53,15 +53,34 @@ class Piece {
     Type GetType() {
       return type;
     }
+    void ChangeSquare(SquarePos l) {
+    	x = l.x;
+    	y = l.y;
+    }
+    void Delete() {
+    	x = -1;
+    	y = -1;
+    }
 };
 
+vector<Piece> removePiece(vector<Piece> pieces, size_t i) {
+	vector<Piece> result;
+	for(size_t ind = 0; ind < pieces.size(); ind++) {
+		if(i == ind) {
+			continue;
+		}
+		result.push_back(pieces[ind]);
+	}
+	return result;
+}
+
 class Game {
-  vector<Piece> WhitePieces, BlackPieces;
-  int MoveCount;
-  PlayerColors turn;
+  mutable vector<Piece> WhitePieces, BlackPieces;
+  mutable int MoveCount;
+  mutable PlayerColors turn;
   public:
-    PieceLoc Selected;
-    vector<SquarePos> LegalMoves;
+  	mutable PieceLoc Selected;
+  	mutable vector<SquarePos> LegalMoves;
     vector<Piece> StartingPosition(PlayerColors color) {
       vector<Piece> res;
       for(int i = 0; i < 8; i++) {
@@ -101,6 +120,14 @@ class Game {
         return BlackPieces;
       }
     }
+    PlayerColors GetTurn() { return turn; }
+    vector<Piece> GetPiecesInTurn() {
+	  if(turn == PWHITE) {
+		return WhitePieces;
+	  }else {
+		return BlackPieces;
+	  }
+    }
     Piece GetPieceInSquare(int x, int y) {
       for(size_t i = 0; i < WhitePieces.size(); i++) {
         if(WhitePieces[i].GetX() == x && WhitePieces[i].GetY() == y) {
@@ -119,7 +146,8 @@ class Game {
     PieceLoc GetPieceLocInSquare(int x, int y) {
       PieceLoc res;
       if(x < 0 || x > 8 || y < 0 || y > 8) {
-        goto retnull;
+          res.i = -1;
+          return res;
       }
       for(size_t i = 0; i < WhitePieces.size(); i++) {
         if(WhitePieces[i].GetX() == x && WhitePieces[i].GetY() == y) {
@@ -135,7 +163,6 @@ class Game {
           return res;
         }
       }
-retnull:
       res.i = -1;
       return res;
     }
@@ -191,7 +218,9 @@ retnull:
             if(this->GetPieceLocInSquare(pc.GetX()+1, pc.GetY()+1).i != -1){
               result.push_back(SquarePos {pc.GetX()+1, pc.GetY()+1});
             }
-            result.push_back(SquarePos {pc.GetX(), pc.GetY()+1});
+            if(this->GetPieceLocInSquare(pc.GetX(), pc.GetY()+1).i == -1) {
+                result.push_back(SquarePos {pc.GetX(), pc.GetY()+1});
+            }
           } else {
             if(pc.GetY() == 6) {
               result.push_back(SquarePos {pc.GetX(), 4});
@@ -202,7 +231,9 @@ retnull:
             if(this->GetPieceLocInSquare(pc.GetX()+1, pc.GetY()-1).i != -1){ 
               result.push_back(SquarePos {pc.GetX()+1, pc.GetY()-1}); 
             }
-            result.push_back(SquarePos {pc.GetX(), pc.GetY()-1});
+            if(this->GetPieceLocInSquare(pc.GetX(), pc.GetY()-1).i == -1) {
+				result.push_back(SquarePos {pc.GetX(), pc.GetY()-1});
+			}
           }
           break;
         }
@@ -228,25 +259,28 @@ retnull:
       return result;
     }
     bool MovePiece(PieceLoc from, SquarePos to) { // Returns false if moving is unsuccessful
-      if(this->turn != from.color) return false;
+      if(from.i == -1) return false;
       if(to.x > 8 || to.x < 0 || to.y > 8 || to.y < 0) return false;
+      if(turn != from.color) return false;
       if(!IsLegal(from, to)) return false;
-      PieceLoc pl = this->GetPieceLocInSquare(to.x, to.y);
+      PieceLoc pl = GetPieceLocInSquare(to.x, to.y);
       if(pl.i != -1){
         if(pl.color == PWHITE) {
-          WhitePieces.erase(WhitePieces.begin() + pl.i);
+        	WhitePieces[pl.i].ChangeSquare((SquarePos) {-1, -1});
         }else {
-          BlackPieces.erase(BlackPieces.begin() + pl.i);
+        	BlackPieces[pl.i].ChangeSquare((SquarePos) {-1, -1});
         }
       }
       if(from.color == PWHITE) {
-        Piece ToPiece(to.x, to.y, WhitePieces[from.i].GetType());
-        WhitePieces[from.i] = ToPiece;
+        WhitePieces[from.i].ChangeSquare(to);
       }else {
-        Piece ToPiece(to.x, to.y, BlackPieces[from.i].GetType());
-        BlackPieces[from.i] = ToPiece;
+        BlackPieces[from.i].ChangeSquare(to);
       }
-      this->turn = this->turn == PWHITE ? PBLACK : PWHITE;
+      turn = turn == PWHITE ? PBLACK : PWHITE;
+      PieceLoc emptyloc;
+      emptyloc.i = -1;
+      Selected = emptyloc;
+      LegalMoves.clear();
       return true;
     }
 };
@@ -363,7 +397,7 @@ void RenderPiece(SDL_Renderer* renderer, Piece p, PlayerColors color) {
 }
 
 void RenderPieces(SDL_Renderer* renderer, Game game) {
-  if(game.Selected.i != -1) {
+  if(game.Selected.i != -1 || game.GetPiecesInTurn()[game.Selected.i].GetX() != -1 || game.GetPiecesInTurn()[game.Selected.i].GetY() != -1) {
       int x = game.GetPieces(game.Selected.color)[game.Selected.i].GetX();
       int y = game.GetPieces(game.Selected.color)[game.Selected.i].GetY();
       SDL_SetRenderDrawColor(renderer, TABLE_SELECTEDCOLOR);
@@ -381,19 +415,15 @@ void RenderPieces(SDL_Renderer* renderer, Game game) {
   }
   vector<Piece> whitep = game.GetPieces(PWHITE);
   for(size_t i = 0; i < whitep.size(); i++) {
-    /* SDL_SetRenderDrawColor(renderer, WHITE_PAWNC); */
-    /* using sdlrect = SDL_Rect; */
-    /* const SDL_Rect rect = sdlrect {whitep[i].GetX()*SQUARE_SIZE+5, whitep[i].GetY()*SQUARE_SIZE+5, PIECE_SIZE, PIECE_SIZE}; */
-    /* SDL_RenderFillRect(renderer, &rect); */
-    RenderPiece(renderer, whitep[i], PWHITE);
+	if( !(whitep[i].GetX() == -1 || whitep[i].GetY() == -1) ) {
+	    RenderPiece(renderer, whitep[i], PWHITE);
+	}
   }
   vector<Piece> blackp = game.GetPieces(PBLACK);
   for(size_t i = 0; i < whitep.size(); i++) {
-    /* SDL_SetRenderDrawColor(renderer, BLACK_PAWNC); */
-    /* using sdlrect = SDL_Rect; */
-    /* const SDL_Rect rect = sdlrect {blackp[i].GetX()*SQUARE_SIZE+5, blackp[i].GetY()*SQUARE_SIZE+5, PIECE_SIZE, PIECE_SIZE}; */
-    /* SDL_RenderFillRect(renderer, &rect); */
-    RenderPiece(renderer, blackp[i], PBLACK);
+	if(!(blackp[i].GetX() == -1 || blackp[i].GetY() == -1)) {
+	    RenderPiece(renderer, blackp[i], PBLACK);
+	}
   }
 }
 
@@ -403,7 +433,6 @@ int main(int argc, char** argv) {
   SDL_Renderer *renderer = SDL_CreateRenderer(window, -1, 0);
   IMG_Init(IMG_INIT_PNG);
   Game *game = new Game();
-
   int quit = 0;
   SDL_Event event;
   while(quit == 0) {
@@ -416,13 +445,18 @@ int main(int argc, char** argv) {
       case SDL_MOUSEBUTTONDOWN: {
         PieceLoc l = FindPieceLoc(event.button.x, event.button.y, *game);
         SquarePos sp = MousePosToSquarePos(event.button.x, event.button.y);
-        if(game->Selected.i != -1) {
-          if(!(game->MovePiece(game->Selected, SquarePos {sp.x, sp.y}))){
+        if(game->Selected.i != -1) { // Bir taş seçiliyse
+        	bool a = game->MovePiece(game->Selected, SquarePos {sp.x, sp.y}); // Seçili taşı oynatmaya çalış başarı durumunu a'ya kaydet
+          if(!a){ // Eğer taş oynatma başarısız olursa
             printf("ERROR: Couldn't move piece: x = %d, y = %d\n", sp.x, sp.y);
+            game->Selected = (PieceLoc) {-1, PWHITE};
+            game->LegalMoves.clear();
+            printf("INFO: Selected i: %d\n", game->Selected.i);
           }
+        }else { // Herhangi bir taş seçili değilse
+		  game->Selected = l; // Farenin tıkladığı taşı seç
+		  game->LegalMoves = game->GetLegalMoves(game->Selected); // Seçili taşın oynayabileceği yerleri göster
         }
-        game->Selected = l;
-        game->LegalMoves = game->GetLegalMoves(game->Selected);
         break;
       }
     }

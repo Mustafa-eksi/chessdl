@@ -89,7 +89,7 @@
 					</folderInfo>
 					<fileInfo id="cdt.managedbuild.toolchain.gnu.mingw.base.249897430.1139288261" name="main.cpp" rcbsApplicability="disable" resourcePath="main.cpp" toolsToInvoke="cdt.managedbuild.tool.gnu.cpp.compiler.mingw.base.935971359.1834696832">
 						<tool id="cdt.managedbuild.tool.gnu.cpp.compiler.mingw.base.935971359.1834696832" name="GCC C++ Compiler" superClass="cdt.managedbuild.tool.gnu.cpp.compiler.mingw.base.935971359">
-							<option id="gnu.cpp.compiler.option.debugging.sanitleak.1458289765" name="Sanitize memory leak (-fsanitize=leak)" superClass="gnu.cpp.compiler.option.debugging.sanitleak" value="false" valueType="boolean"/>
+							<option id="gnu.cpp.compiler.option.debugging.sanitleak.1458289765" name="Sanitize memory leak (-fsanitize=leak)" superClass="gnu.cpp.compiler.option.debugging.sanitleak" value="true" valueType="boolean"/>
 							<option id="gnu.cpp.compiler.option.debugging.sanitpointers.1611651019" name="Sanitize pointer operations (-fsanitize=pointer-compare -fsanitize=pointer-subtract)" superClass="gnu.cpp.compiler.option.debugging.sanitpointers" value="false" valueType="boolean"/>
 							<option id="gnu.cpp.compiler.option.debugging.sanitaddress.1908919245" name="Sanitize address (-fsanitize=address)" superClass="gnu.cpp.compiler.option.debugging.sanitaddress" value="false" valueType="boolean"/>
 							<inputType id="cdt.managedbuild.tool.gnu.cpp.compiler.input.1359376702" superClass="cdt.managedbuild.tool.gnu.cpp.compiler.input"/>

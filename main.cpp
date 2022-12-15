@@ -232,18 +232,45 @@ class Game {
               result.push_back(SquarePos {pc.GetX()+1, pc.GetY()-1}); 
             }
             if(this->GetPieceLocInSquare(pc.GetX(), pc.GetY()-1).i == -1) {
-				result.push_back(SquarePos {pc.GetX(), pc.GetY()-1});
-			}
+              result.push_back(SquarePos {pc.GetX(), pc.GetY()-1});
+            }
           }
           break;
         }
         case Rook: {
-          for(int ix = 0; ix < 8; ix++) {
-            if(pc.GetX() != ix) {
-              if(this->GetPieceLocInSquare(ix, pc.GetY()).i != -1) {
-              }
+          /*
+            1. Başla
+            2. Şu anki seçili kalenin pozisyonundan başla
+            3. hem sağa hem sola git
+            4. engelle karşılaşmazsan gitmeye devam et
+            5. engelle karşılaşırsan bu engeli de dahil et ve dur
+            6. aynı şeyi aşağı yukarıya uygula
+          */
+         int rx = pc.GetX(), ry = pc.GetY();
+         for(int ix = 1; -1 < rx-ix; ix++) {
+            result.push_back(SquarePos {rx-ix, ry});
+            if(GetPieceLocInSquare(rx-ix, ry).i == -1) {
+              break;
             }
-          }
+         }
+         for(int ix = 1; 8 > rx+ix; ix++) {
+            result.push_back(SquarePos {rx+ix, ry});
+            if(GetPieceLocInSquare(rx+ix, ry).i == -1) {
+              break;
+            }
+         }
+         for(int iy = 1; -1 < ry-iy; iy++) {
+            result.push_back(SquarePos {rx, ry-iy});
+            if(GetPieceLocInSquare(rx, ry-iy).i == -1) {
+              break;
+            }
+         }
+         for(int iy = 1; 8 > ry+iy; iy++) {
+            result.push_back(SquarePos {rx, ry+iy});
+            if(GetPieceLocInSquare(rx, ry+iy).i == -1) {
+              break;
+            }
+         }
           break;
         }
         default: {
